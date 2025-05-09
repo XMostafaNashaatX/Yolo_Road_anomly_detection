@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Road Anomaly Detection</title>
+  <style>
+    :root {
+      --primary-color: #4CAF50;
+      --background-color: #f5f5f5;
+      --card-background: #fff;
+      --text-color: #333;
+      --border-color: #444;
+    }
+    
+    /* Dark mode media query */
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --primary-color: #5cbb60;
+        --background-color: #121212;
+        --card-background: #1e1e1e;
+        --text-color: #e0e0e0;
+        --border-color: #666;
+      }
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      max-width: 100%;
+      margin: 0 auto;
+      padding: 10px;
+      background-color: var(--background-color);
+      color: var(--text-color);
+      transition: background-color 0.3s, color 0.3s;
+      overflow-x: hidden;
+    }
+    
+    h2 {
+      color: var(--text-color);
+      text-align: center;
+      margin: 10px 0;
+      font-size: 1.5rem;
+    }
+    
+    #container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 15px;
+      margin-top: 15px;
+      width: 100%;
+    }
+    
+    @media (min-width: 992px) {
+      #container {
+        flex-direction: row;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+      
+      body {
+        padding: 20px;
+      }
+      
+      h2 {
+        font-size: 1.75rem;
+      }
+    }
+    
+    .video-container {
+      position: relative;
+      border: 2px solid var(--border-color);
+      border-radius: 8px;
+      overflow: hidden;
+      background-color: #000;
+      width: 100%;
+      max-width: 640px;
+      margin: 0 auto;
+    }
+    
+    video, img, #outputImage {
+      width: 100%;
+      height: auto;
+      display: block;
+      aspect-ratio: 4/3;
+      object-fit: cover;
+    }
+    
+    .label {
+      background-color: rgba(0,0,0,0.7);
+      color: white;
+      padding: 5px 10px;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      box-sizing: border-box;
+      font-size: 14px;
+      z-index: 2;
+    }
+    
+    #status {
+      text-align: center;
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 5px;
+      background-color: var(--card-background);
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    
+    #controls {
+      text-align: center;
+      margin: 15px 0;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+    }
+    
+    button {
+      background-color: var(--primary-color);
+      border: none;
+      color: white;
+      padding: 12px 20px;
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
+      font-size: 16px;
+      margin: 0;
+      cursor: pointer;
+      border-radius: 50px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      transition: all 0.3s;
+      flex-grow: 1;
+      max-width: 200px;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+    
+    button:active {
+      transform: scale(0.95);
+    }
+    
+    button:disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+    
+    .stats {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background-color: rgba(0,0,0,0.7);
+      color: white;
+      padding: 5px 10px;
+      font-size: 12px;
+      text-align: center;
+      z-index: 2;
+    }
+    
+    .settings {
+      margin: 10px auto;
+      width: 100%;
+      max-width: 500px;
+      padding: 15px;
+      background-color: var(--card-background);
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    
+    .setting-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    
+    .setting-label {
+      flex: 1;
+      min-width: 120px;
+      margin-right: 10px;
+    }
+    
+    input[type="range"] {
+      flex: 2;
+      min-width: 150px;
+      margin: 0 10px;
+      -webkit-appearance: none;
+      width: 100%;
+      height: 8px;
+      border-radius: 5px;
+      background: #d3d3d3;
+      outline: none;
+    }
+    
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: var(--primary-color);
+      cursor: pointer;
+    }
+    
+    input[type="range"]::-moz-range-thumb {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: var(--primary-color);
+      cursor: pointer;
+      border: none;
+    }
+    
+    .value-display {
+      flex: 0 0 50px;
+      text-align: right;
+    }
+    
+    select {
+      padding: 8px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      background-color: var(--card-background);
+      color: var(--text-color);
+      font-size: 14px;
+    }
+    
+    .camera-selector {
+      margin-bottom: 15px;
+      width: 100%;
+    }
+    
+    .hidden {
+      display: none !important;
+    }
+    
+    .camera-flip {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background-color: rgba(0,0,0,0.6);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      font-size: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 3;
+      cursor: pointer;
+    }
+    
+    .loading-spinner {
+      border: 4px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top: 4px solid var(--primary-color);
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      margin-top: -20px;
+      margin-left: -20px;
+      z-index: 2;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0, 0, 0, 0.8);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      color: white;
+      text-align: center;
+      padding: 20px;
+    }
+    
+    .overlay p {
+      margin: 20px 0;
+      max-width: 600px;
+    }
+    
+    #fullscreenBtn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      font-size: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+      z-index: 100;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div id="startupOverlay" class="overlay">
+    <h2>Road Anomaly Detection</h2>
+    <p>This app uses your camera to detect road anomalies in real-time.</p>
+    <p>Please allow camera access when prompted.</p>
+    <button id="startupBtn">Start App</button>
+  </div>
+
+  <h2>Road Anomaly Detection</h2>
+  
+  <div id="status">Waiting for camera access...</div>
+  
+  <div id="controls">
+    <button id="startBtn">Start Detection</button>
+    <button id="stopBtn" disabled>Stop Detection</button>
+    <button id="switchCameraBtn" class="hidden">Switch Camera</button>
+  </div>
+  
+  <div class="settings">
+    <div id="cameraSelector" class="camera-selector hidden">
+      <label for="cameraSelect">Camera: </label>
+      <select id="cameraSelect"></select>
+    </div>
+    
+    <div class="setting-row">
+      <span class="setting-label">Frame Rate:</span>
+      <input type="range" id="frameRateSlider" min="1" max="30" value="10">
+      <span class="value-display" id="frameRateValue">10 FPS</span>
+    </div>
+    
+    <div class="setting-row">
+      <span class="setting-label">Image Quality:</span>
+      <input type="range" id="qualitySlider" min="50" max="100" value="80">
+      <span class="value-display" id="qualityValue">80%</span>
+    </div>
+    
+    <div class="setting-row">
+      <span class="setting-label">Resolution:</span>
+      <select id="resolutionSelect">
+        <option value="320x240">Low (320x240)</option>
+        <option value="640x480" selected>Medium (640x480)</option>
+        <option value="1280x720">High (1280x720)</option>
+      </select>
+    </div>
+  </div>
+  
+  <div id="container">
+    <div class="video-container">
+      <div class="label">Input Camera Feed</div>
+      <button id="flipCameraBtn" class="camera-flip hidden">⟲</button>
+      <video id="video" autoplay muted playsinline></video>
+      <div class="stats" id="inputStats">-</div>
+    </div>
+    
+    <div class="video-container">
+      <div class="label">Detected Anomalies</div>
+      <div id="loadingSpinner" class="loading-spinner hidden"></div>
+      <img id="outputImage" alt="Processed frame" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" />
+      <div class="stats" id="outputStats">-</div>
+    </div>
+  </div>
+
+  <button id="fullscreenBtn">⛶</button>
+
+  <script>
+    // DOM elements
+    const video = document.getElementById('video');
+    const outputImage = document.getElementById('outputImage');
+    const statusDiv = document.getElementById('status');
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const switchCameraBtn = document.getElementById('switchCameraBtn');
+    const flipCameraBtn = document.getElementById('flipCameraBtn');
+    const inputStats = document.getElementById('inputStats');
+    const outputStats = document.getElementById('outputStats');
+    const frameRateSlider = document.getElementById('frameRateSlider');
+    const frameRateValue = document.getElementById('frameRateValue');
+    const qualitySlider = document.getElementById('qualitySlider');
+    const qualityValue = document.getElementById('qualityValue');
+    const resolutionSelect = document.getElementById('resolutionSelect');
+    const cameraSelect = document.getElementById('cameraSelect');
+    const cameraSelector = document.getElementById('cameraSelector');
+    const loadingSpinner = document.getElementById('loadingSpinner');
+    const startupOverlay = document.getElementById('startupOverlay');
+    const startupBtn = document.getElementById('startupBtn');
+    const fullscreenBtn = document.getElementById('fullscreenBtn');
+    
+    // Global state
+    let isProcessing = false;
+    let stream = null;
+    let processingInterval = null;
+    let framesSent = 0;
+    let framesReceived = 0;
+    let lastFrameSentTime = 0;
+    let lastFrameReceivedTime = 0;
+    let totalLatency = 0;
+    let latencyMeasurements = 0;
+    let frameId = 0;
+    let frameTimestamps = {};
+    let frameRate = 10; // Lower default for mobile
+    let imageQuality = 80;
+    let resolution = {width: 640, height: 480};
+    let availableCameras = [];
+    let currentCameraIndex = 0;
+    let facingMode = "environment"; // Default to back camera
+    let sessionId = null;
+    let isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    let isAndroid = /Android/.test(navigator.userAgent);
+    let isMobile = isIOS || isAndroid || window.innerWidth < 768;
+    let noSleep = null;
+    
+    // Setup NoSleep to prevent screen from turning off
+    function setupNoSleep() {
+      try {
+        // Attempt to create NoSleep instance
+        class NoSleepFallback {
+          enable() {
+            this.video = document.createElement('video');
+            this.video.setAttribute('playsinline', '');
+            this.video.setAttribute('muted', '');
+            this.video.setAttribute('loop', '');
+            this.video.src = 'data:video/mp4;base64,AAAAIGZ0eXBtcDQyAAAAAG1wNDJtcDQxaXNvbWF2YzEAAATKbW9vdgAAAGxtdmhkAAAAANLEP5XSxD+VAAB1MAAAdU4AAQAAAQAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAACFpb2RzAAAAABCAgIAQAE////9//w6AgIAEAAAAAQAABDV0cmFrAAAAXHRraGQAAAAH0sQ/ldLEP5UAAAABAAAAAAAAdU4AAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAQAAAAAFsAAABLAAAAAAAJGVkdHMAAAAcZWxzdAAAAAAAAAABAAABdQAABgAAAAABtm1kaWEAAAAgbWRoZAAAAADSxD+V0sQ/lQAAA+gAAAHsVxc2VgAAAABzb3VuZAAAAAAAAAAAAAAAAE9CSkMAAAAADXNwZGlmAAAA8AAAABVtZXRhAAAAAAAAAGNvbQAAdTlkYXRhAAAAAKBMCUkvIi0xFgAAABhkYXRhAAAAAEdQAAAAAMQEBAzQYMAAAAABAAAAEGFtZjQxAAAAAAAAAAEAAAAAAAAAAAAAACBlc2RzAAAAAAOAgIAiAAEABAiCAQBEhIgAAIEjAQAAAAAAAAgAAAAAAAEDgICAAAAAAgAAAAoHgIABAJMgAAAAAAAQY29scm5jbHgABgAIgQEAAAAAEWNvbHItcHJpbgAGAAiBCAAAAABAZW50YmMAAAAAAAAAHgAAAAwAAAD+AAAAoQABAMAAAACgAAABGQABAAMAAAD+AAABoQADAMAAAACgAAACTAAAACphdWRjAAAAAAAAAAAdAAAAKElTRkxhYwAAABhjb2wxaW5mAAAAABAAAIEgAAAQY2wxaW5mAAAAABAAAIEgAAAQY21pbmYAAAAAEAAAgRAAAAAQYXV4YwAAAAAQAAAgEAAAAABzc3RibAAAACxzdHNkAAAAAAAAAAEAAAAcYXZjMQAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAWwBLABIAAAASAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGP//AAAAMmF2Y0MBQsA3/+EAF2dCwA3ZAsTsBaJNkigQAAADAEAAAAMBA8SJmgEABWjJYPLIAAAAGHN0dHMAAAAAAAAAAQAAAAgAAAQAAAAAHHN0c2MAAAAAAAAAAQAAAAEAAAAYAAAAAQAAAExzdHN6AAAAAAAAAAAAAAAIAAAD6QAAAAwAAAAMAAAADAAAAAwAAAAMAAAADwAAAAwAAAAMAAAAEAAAABxzdGNvAAAAAAAAAAcAAAAsAAANqAAADfgAAA4uAAAOkAAADtwAAA9cAAAPogAAD9oAAA/oAAAQQAAAEFAAABB6AAAAxHZ1ZHQAAAAAAAAACmVzZHMAAAAAA4CAgC0AAQAEgICAF0AVBIgAAAgrAAkAAAIJrGFtZGMAAAAAIW1kYXQAAAAAcU1JS0mKjnsAAAAcZGF0YQAAAAfap0KJLi0tFgAAABhkYXRhAAAAAEdQAAAAAMQEBJCSJAAAAAEAAAAQYW1mNDEAAAAAAAAAAQAAAAAAAAAAAAAA';
+            this.video.play();
+          }
+          disable() {
+            if (this.video) {
+              this.video.pause();
+              this.video.src = '';
+              this.video.remove();
+              this.video = null;
+            }
+          }
+        }
+        
+        noSleep = new NoSleepFallback();
+      } catch (e) {
+        console.warn("NoSleep API not available, using fallback", e);
+      }
+    }
+    
+    // Initialize session with server
+    async function initSession() {
+      try {
+        const response = await fetch('/init_session', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        const data = await response.json();
+        sessionId = data.session_id;
+        console.log("Session initialized", sessionId);
+      } catch (err) {
+        console.error("Failed to initialize session:", err);
+        sessionId = "fallback-" + Date.now(); // Create a fallback session ID
+      }
+    }
+    
+    // Check if device supports multiple cameras
+    async function checkCameraSupport() {
+      try {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+          console.log("MediaDevices not supported by this browser");
+          return false;
+        }
+        
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        availableCameras = devices.filter(device => device.kind === 'videoinput');
+        
+        if (availableCameras.length > 1) {
+          switchCameraBtn.classList.remove('hidden');
+          cameraSelector.classList.remove('hidden');
+          
+          // Populate camera selection dropdown
+          cameraSelect.innerHTML = '';
+          availableCameras.forEach((camera, index) => {
+            const option = document.createElement('option');
+            option.value = index;
+            option.text = camera.label || `Camera ${index + 1}`;
+            cameraSelect.appendChild(option);
+          });
+          
+          // If on mobile, also show the flip button
+          if (isMobile) {
+            flipCameraBtn.classList.remove('hidden');
+          }
+          
+          return true;
+        }
+        
+        return false;
+      } catch (err) {
+        console.error("Error checking camera support:", err);
+        return false;
+      }
+    }
+    
+    // Update settings displays
+    frameRateSlider.addEventListener('input', () => {
+      frameRate = parseInt(frameRateSlider.value);
+      frameRateValue.textContent = `${frameRate} FPS`;
+      // Update if already processing
+      if (isProcessing && processingInterval) {
+        clearInterval(processingInterval);
+        processingInterval = setInterval(sendFrame, 1000 / frameRate);
+      }
+    });
+    
+    qualitySlider.addEventListener('input', () => {
+      imageQuality = parseInt(qualitySlider.value);
+      qualityValue.textContent = `${imageQuality}%`;
+    });
+    
+    resolutionSelect.addEventListener('change', () => {
+      const [width, height] = resolutionSelect.value.split('x').map(Number);
+      resolution = {width, height};
+      
+      // Restart stream with new resolution if already running
+      if (isProcessing) {
+        stopProcessing();
+        startCapture();
+      }
+    });
+    
+    cameraSelect.addEventListener('change', () => {
+      currentCameraIndex = parseInt(cameraSelect.value);
+      if (isProcessing) {
+        stopProcessing();
+        startCapture();
+      }
+    });
+    
+    // Flip camera on mobile
+    flipCameraBtn.addEventListener('click', () => {
+      facingMode = facingMode === "environment" ? "user" : "environment";
+      if (isProcessing) {
+        stopProcessing();
+        startCapture();
+      }
+    });
+    
+    // Switch camera button 
+    switchCameraBtn.addEventListener('click', () => {
+      currentCameraIndex = (currentCameraIndex + 1) % availableCameras.length;
+      cameraSelect.value = currentCameraIndex;
+      if (isProcessing) {
+        stopProcessing();
+        startCapture();
+      }
+    });
+    
+    // Fullscreen button
+    fullscreenBtn.addEventListener('click', toggleFullscreen);
+    
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => {
+          console.error(`Error attempting to enable full-screen mode: ${err.message}`);
+        });
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        }
+      }
+    }
+    
+    // Initial setup
+    startupBtn.addEventListener('click', () => {
+      startupOverlay.style.display = 'none';
+      setupNoSleep();
+      initSession();
+      checkCameraSupport();
+    });
+
+    // Handle start button click
+    startBtn.addEventListener('click', () => {
+      startCapture();
+      // Enable NoSleep to keep screen on
+      if (noSleep) {
+        noSleep.enable();
+      }
+    });
+    
+    // Start capture and processing
+    async function startCapture() {
+      try {
+        statusDiv.textContent = "Requesting camera access...";
+        loadingSpinner.classList.remove('hidden');
+        
+        // Get selected resolution
+        const [targetWidth, targetHeight] = resolutionSelect.value.split('x').map(Number);
+        
+        let constraints = {
+          video: {
+            width: { ideal: targetWidth },
+            height: { ideal: targetHeight }
+          },
+          audio: false
+        };
+        
+        // Handle camera selection differently based on platform and availability
+        if (availableCameras.length > 1) {
+          if (isMobile) {
+            // On mobile, use facingMode
+            constraints.video.facingMode = facingMode;
+          } else {
+            // On desktop, use deviceId if available
+            const selectedCamera = availableCameras[currentCameraIndex];
+            if (selectedCamera && selectedCamera.deviceId) {
+              constraints.video.deviceId = { exact: selectedCamera.deviceId };
+            }
+          }
+        } else if (isMobile) {
+          // Default to back camera on mobile if we can't enumerate devices
+          constraints.video.facingMode = "environment";
+        }
+        
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+        
+        // Adjust video element
+        video.srcObject = stream;
+        video.setAttribute('playsinline', true); // Important for iOS
+        await video.play();
+        
+        // Show actual obtained resolution
+        const videoTrack = stream.getVideoTracks()[0];
+        const settings = videoTrack.getSettings();
+        console.log(`Actual video resolution: ${settings.width}x${settings.height}`);
+        
+        statusDiv.textContent = "Camera connected. Starting detection...";
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+        isProcessing = true;
+        
+        // Reset counters
+        framesSent = 0;
+        framesReceived = 0;
+        totalLatency = 0;
+        latencyMeasurements = 0;
+        frameTimestamps = {};
+        
+        // Wait a moment for video to initialize
+        setTimeout(() => {
+          loadingSpinner.classList.add('hidden');
+          processingInterval = setInterval(sendFrame, 1000 / frameRate);
+          
+          // Update stats display
+          setInterval(updateStats, 1000);
+        }, 500);
+        
+      } catch (err) {
+        loadingSpinner.classList.add('hidden');
+        statusDiv.textContent = `Error: ${err.message}`;
+        console.error('Camera error:', err);
+        
+        // If user denied camera access, provide instructions
+        if (err.name === 'NotAllowedError') {
+          statusDiv.textContent = "Camera access denied. Please check your browser settings and refresh the page.";
+        }
+      }
+    }
+    
+    // Handle stop button click
+    stopBtn.addEventListener('click', () => {
+      stopProcessing();
+      // Disable NoSleep to allow screen to turn off
+      if (noSleep) {
+        noSleep.disable();
+      }
+    });
+
+    function stopProcessing() {
+      isProcessing = false;
+      loadingSpinner.classList.add('hidden');
+      
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+      if (processingInterval) {
+        clearInterval(processingInterval);
+      }
+      statusDiv.textContent = "Detection stopped.";
+      startBtn.disabled = false;
+      stopBtn.disabled = true;
+      
+      // Reset output display
+      outputImage.src = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
+      inputStats.textContent = "-";
+      outputStats.textContent = "-";
+    }
+
+    // Send a frame to the server
+    async function sendFrame() {
+      if (!isProcessing) return;
+      
+      try {
+        // Check if video is ready and playing
+        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          
+          // Set canvas dimensions to match video or selected resolution
+          canvas.width = resolution.width;
+          canvas.height = resolution.height;
+          
+          // Draw current frame to canvas
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          
+          // Generate frame ID for latency tracking
+          const currentFrameId = ++frameId;
+          frameTimestamps[currentFrameId] = performance.now();
+          
+          // Convert to blob with selected quality
+          canvas.toBlob(async blob => {
+            try {
+              // Show loading indicator if processing is taking too long
+              const currentTime = performance.now();
+              if (currentTime - lastFrameReceivedTime > 2000) {
+                loadingSpinner.classList.remove('hidden');
+              }
+              
+              // Create form data
+              const form = new FormData();
+              form.append('image', blob, 'frame.jpg');
+              form.append('frame_id', currentFrameId);
+              form.append('session_id', sessionId);
+              
+              // Track timing
+              lastFrameSentTime = performance.now();
+              framesSent++;
+              
+              // Send to backend
+              const res = await fetch('/predict', { 
+                method: 'POST', 
+                body: form 
+              });
+              
+              if (!res.ok) {
+                throw new Error(`Server error: ${res.status}`);
+              }
+              
+              // Display processed frame
+              const imgBlob = await res.blob();
+              outputImage.src = URL.createObjectURL(imgBlob);
+              loadingSpinner.classList.add('hidden');
+              
+              // Calculate latency
+              const receiveTime = performance.now();
+              framesReceived++;
+              
+              // Get frame ID from response if available
+              const frameIdHeader = res.headers.get('X-Frame-Id');
+              const detectionsHeader = res.headers.get('X-Detections') || "0";
+              
+              if (frameIdHeader) {
+                const responseFrameId = parseInt(frameIdHeader);
+                const sentTime = frameTimestamps[responseFrameId];
+                if (sentTime) {
+                  const latency = receiveTime - sentTime;
+                  totalLatency += latency;
+                  latencyMeasurements++;
+                  delete frameTimestamps[responseFrameId];
+                }
+              }
+              
+              lastFrameReceivedTime = receiveTime;
+              
+              // Update stats with detections
+              outputStats.textContent = `${framesReceived} frames, ${detectionsHeader} objects detected`;
+            } catch (err) {
+              console.error('Processing error:', err);
+              statusDiv.textContent = `Error: ${err.message}`;
+              loadingSpinner.classList.add('hidden');
+            }
+          }, 'image/jpeg', imageQuality / 100);
+        }
+      } catch (err) {
+        console.error('Frame processing error:', err);
+        loadingSpinner.classList.add('hidden');
+      }
+    }
+    
+    // Update statistics display
+    function updateStats() {
+      if (!isProcessing) return;
+      
+      const avgLatency = latencyMeasurements > 0 ? (totalLatency / latencyMeasurements).toFixed(0) : '-';
+      
+      inputStats.textContent = `${framesSent} frames, ${frameRate} FPS`;
+      
+      // Reset for next interval
+      totalLatency = 0;
+      latencyMeasurements = 0;
+    }
+    
+    // Handle page visibility changes
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        // Page is hidden, pause processing to save resources
+        if (isProcessing) {
+          clearInterval(processingInterval);
+          processingInterval = null;
+        }
+      } else {
+        // Page is visible again, resume processing
+        if (isProcessing && !processingInterval) {
+          processingInterval = setInterval(sendFrame, 1000 / frameRate);
+        }
+      }
+    });
+    
+    // Handle orientation changes on mobile
+    window.addEventListener('orientationchange', () => {
+      // Give the browser time to adjust layout
+      setTimeout(() => {
+        if (isProcessing) {
+          // Resize/adjust video if needed
+          const track = stream?.getVideoTracks()[0];
+          if (track) {
+            const settings = track.getSettings();
+            console.log(`Video after orientation change: ${settings.width}x${settings.height}`);
+          }
+        }
+      }, 500);
+    });
+    
+    // Handle resize events
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        // Update mobile detection
+        isMobile = window.innerWidth < 768 || isIOS || isAndroid;
+      }, 250);
+    });
+    
+    // Check for iOS PWA mode
+    const isInStandaloneMode = () =>
+      (window.navigator.standalone) || 
+      (window.matchMedia('(display-mode: standalone)').matches);
+    
+    if (isInStandaloneMode()) {
+      // In PWA mode, make fullscreen button invisible as it's not needed
+      fullscreenBtn.style.display = 'none';
+    }
+  </script>
+</body>
+</html>
